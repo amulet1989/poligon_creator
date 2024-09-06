@@ -1,5 +1,11 @@
 # poligon_creator
 
+Correr:
+```
+python poligono_editor.py
+```
+![Imagen de la interfaz](imagen1.jpg)
+
 # Ayuda para el Editor de Polígonos
 
 El programa incluye una serie de comandos y acciones para interactuar con la imagen y los polígonos. A continuación se describen los comandos disponibles:
