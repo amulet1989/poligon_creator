@@ -199,10 +199,10 @@ def onkeypress(event):
 
     elif event.key == "l":
         # Borrar polígonos y cargar una nueva imagen
-        poligonos = []
-        poligono_actual = []
         image_path = cargar_imagen()
         imagen = plt.imread(image_path)
+        poligonos = []
+        poligono_actual = []
         actualizar_imagen()
 
     elif event.key == "h":
@@ -257,7 +257,7 @@ def onmotion(event):
                     np.linalg.norm(
                         [event.xdata - mid_point[0], event.ydata - mid_point[1]]
                     )
-                    < 1
+                    < 3
                 ):
                     poligonos[i].insert(j + 1, [event.xdata, event.ydata])
                     actualizar_imagen()
