@@ -209,6 +209,7 @@ def onkeypress(event):
         ayuda1 = """
     click izquierdo -> crear nuevo vertice
     click derecho ->  eliminar último vertice
+    Scroll up/ Scroll down -> hacer zoom in y zoom out.
     """
         ayuda2 = """
     click izquierdo -> mover punto seleccionado
