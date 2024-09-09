@@ -14,6 +14,8 @@ El programa incluye una serie de comandos y acciones para interactuar con la ima
 
 - **Click izquierdo**: Crear nuevo vértice.
 - **Click derecho**: Eliminar el último vértice del polígono actual.
+- **Scroll up/ Scroll down**: hacer zoom in y zoom out.
+
 
 ## Modo de Corrección
 
