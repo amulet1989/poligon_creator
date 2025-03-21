@@ -1,7 +1,9 @@
 import matplotlib.pyplot as plt
 import numpy as np
+from src.utils import cargar_imagen_o_video, get_frame_from_video
 import tkinter as tk
 from tkinter import filedialog
+import cv2
 
 ### Lista eventos de tecaldo ###
 """
@@ -17,19 +19,28 @@ r -> pasar al modo de corrección
 """
 
 
-# Función para cargar la imagen
-def cargar_imagen():
-    root = tk.Tk()
-    root.withdraw()  # Oculta la ventana principal de tkinter
-    file_path = filedialog.askopenfilename(
-        title="Seleccionar una imagen",
-        filetypes=[("Archivos de imagen", ["*.jpg", "*.jpeg"])],
-    )
-    return file_path if file_path else None
+# Cargar imagen
+def cargar():
+    image_path = cargar_imagen_o_video()
+    # verificar si se seleccionó un video ,mp4 o avi
+    if image_path.endswith((".mp4", ".avi")):
+        print("Video seleccionado:", image_path)
+        # obtener una imagen de un video
+        imagen = get_frame_from_video(
+            image_path,
+            5,
+        )
+        # guardar la imagen en la misma carpeta del video
+        image_path = image_path.replace(".mp4", ".jpg")
+        image_path = image_path.replace(".avi", ".jpg")
+        cv2.imwrite(image_path, imagen)
+        imagen = plt.imread(image_path)
+    else:
+        print("Imagen seleccionada:", image_path)
+        imagen = plt.imread(image_path)
+    return imagen, image_path
 
-
-image_path = cargar_imagen()
-imagen = plt.imread(image_path)
+imagen, image_path=cargar()
 
 # Inicializar variables
 poligonos = []
@@ -42,6 +53,29 @@ umbral_cercania = 5
 fig, ax = plt.subplots()
 ax.imshow(imagen, aspect="equal")
 fig.suptitle("Creando polígonos")  # Título inicial
+
+# Función para actualizar la imagen
+def actualizar_imagen():
+    ax.clear()
+    ax.imshow(imagen, aspect="equal")
+    for i, poligono in enumerate(poligonos):
+        ax.plot(*zip(*poligono), "r-")
+        for punto in poligono:
+            ax.plot(punto[0], punto[1], "ro")
+        # Dibujar el número del polígono en el primer vértice
+        ax.text(poligono[0][0], poligono[0][1], str(i + 1), color="blue", fontsize=18)
+        # Añadir puntos sin relleno entre los vértices
+        for j in range(len(poligono) - 1):
+            mid_point = [
+                (poligono[j][0] + poligono[j + 1][0]) / 2,
+                (poligono[j][1] + poligono[j + 1][1]) / 2,
+            ]
+            ax.plot(mid_point[0], mid_point[1], "ro", mfc="none")
+    for punto in poligono_actual:
+        ax.plot(punto[0], punto[1], "ro")
+    if len(poligono_actual) > 1:
+        ax.plot(*zip(*poligono_actual), "r-")
+    fig.canvas.draw()
 
 
 # Función para manejar clics del mouse
@@ -92,7 +126,7 @@ def onclick(event):
         # Si es el primer punto en un polígono cerrado, mover también el último punto
         if punto == 0 and len(poligonos[poligono]) > 1:
             poligonos[poligono][-1] = [event.xdata, event.ydata]
-
+        
         actualizar_imagen()
         punto_seleccionado = None
 
@@ -103,29 +137,18 @@ def onclick(event):
         actualizar_imagen()
         punto_seleccionado = None
 
-
-# Función para actualizar la imagen
-def actualizar_imagen():
-    ax.clear()
-    ax.imshow(imagen, aspect="equal")
-    for i, poligono in enumerate(poligonos):
-        ax.plot(*zip(*poligono), "r-")
-        for punto in poligono:
-            ax.plot(punto[0], punto[1], "ro")
-        # Dibujar el número del polígono en el primer vértice
-        ax.text(poligono[0][0], poligono[0][1], str(i + 1), color="blue", fontsize=18)
-        # Añadir puntos sin relleno entre los vértices
-        for j in range(len(poligono) - 1):
-            mid_point = [
-                (poligono[j][0] + poligono[j + 1][0]) / 2,
-                (poligono[j][1] + poligono[j + 1][1]) / 2,
-            ]
-            ax.plot(mid_point[0], mid_point[1], "ro", mfc="none")
-    for punto in poligono_actual:
-        ax.plot(punto[0], punto[1], "ro")
-    if len(poligono_actual) > 1:
-        ax.plot(*zip(*poligono_actual), "r-")
-    fig.canvas.draw()
+    elif event.button == 2 and modo_correcion:  # Clic central para añadir vértice en punto intermedio
+        for i, poligono in enumerate(poligonos):
+            for j in range(len(poligono) - 1):
+                mid_point = [
+                    (poligono[j][0] + poligono[j + 1][0]) / 2,
+                    (poligono[j][1] + poligono[j + 1][1]) / 2,
+                ]
+                if np.linalg.norm([event.xdata - mid_point[0], event.ydata - mid_point[1]]) < umbral_cercania:
+                    poligonos[i].insert(j + 1, [event.xdata, event.ydata])
+                    actualizar_imagen()
+                    return
+    
 
 
 # Función para manejar teclas
@@ -199,8 +222,9 @@ def onkeypress(event):
 
     elif event.key == "l":
         # Borrar polígonos y cargar una nueva imagen
-        image_path = cargar_imagen()
-        imagen = plt.imread(image_path)
+        # image_path = cargar_imagen_o_video()
+        # imagen = plt.imread(image_path)
+        imagen, image_path=cargar()
         poligonos = []
         poligono_actual = []
         actualizar_imagen()
@@ -209,6 +233,7 @@ def onkeypress(event):
         ayuda1 = """
     click izquierdo -> crear nuevo vertice
     click derecho ->  eliminar último vertice
+    click central -> añadir vértice en punto intermedio (modo corrección)
     Scroll up/ Scroll down -> hacer zoom in y zoom out.
     """
         ayuda2 = """
@@ -247,22 +272,22 @@ def onmotion(event):
                     punto_seleccionado = (i, j)
                     break
 
-        # Verificar si se clicó en un punto sin relleno para añadir un nuevo vértice
-        for i, poligono in enumerate(poligonos):
-            for j in range(len(poligono) - 1):
-                mid_point = [
-                    (poligono[j][0] + poligono[j + 1][0]) / 2,
-                    (poligono[j][1] + poligono[j + 1][1]) / 2,
-                ]
-                if (
-                    np.linalg.norm(
-                        [event.xdata - mid_point[0], event.ydata - mid_point[1]]
-                    )
-                    < 3
-                ):
-                    poligonos[i].insert(j + 1, [event.xdata, event.ydata])
-                    actualizar_imagen()
-                    return
+        # # Verificar si se clicó en un punto sin relleno para añadir un nuevo vértice
+        # for i, poligono in enumerate(poligonos):
+        #     for j in range(len(poligono) - 1):
+        #         mid_point = [
+        #             (poligono[j][0] + poligono[j + 1][0]) / 2,
+        #             (poligono[j][1] + poligono[j + 1][1]) / 2,
+        #         ]
+        #         if (
+        #             np.linalg.norm(
+        #                 [event.xdata - mid_point[0], event.ydata - mid_point[1]]
+        #             )
+        #             < 3
+        #         ):
+        #             poligonos[i].insert(j + 1, [event.xdata, event.ydata])
+        #             actualizar_imagen()
+        #             return
 
 
 # Función para manejar el zoom con el scroll del mouse
